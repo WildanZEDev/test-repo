@@ -1,0 +1,19 @@
+name: Akses Interaktif SSH Linux ARM64
+
+on:
+  workflow_dispatch: # Agar tombol "Run workflow" muncul manual di GitHub
+
+jobs:
+  interactive-terminal:
+    # Menggunakan server asli berbasis Linux ARM64 gratisan GitHub
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+    - name: Ambil Kode Repositori (Optional)
+      uses: actions/checkout@v4
+
+    - name: Nyalakan Sesi SSH Tmate Interaktif
+      uses: mxschmitt/action-tmate@v3
+      # Opsional: Membatasi waktu tunggu terminal agar kuota tidak tersedot habis
+      with:
+        limit-access-to-actor: false # Set ke true jika ingin membatasi akses hanya untuk akun GitHub Anda
