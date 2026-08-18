@@ -1,0 +1,59 @@
+name: Build Allay Native Image (ARM64 GLIBC + Agent)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-native-agent:
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup GraalVM 21
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '21'
+          distribution: 'graalvm'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          native-image-job-reports: 'true'
+
+      - name: Download Allay JAR
+        run: |
+          echo "📥 Nyedot file Allay JAR..."
+          curl -L -o allay.jar https://github.com/AllayMC/Allay/releases/download/0.14.0/allay-server-0.14.0-058fef833-shaded.jar
+
+      - name: Tracing Agent - Rekam Aktivitas Reflection
+        run: |
+          echo "🕵️ Mengirim agen rahasia GraalVM buat memantau Allay..."
+          
+          # Menjalankan Allay dengan Tracing Agent di background (&)
+          java -agentlib:native-image-agent=config-output-dir=META-INF/native-image -jar allay.jar &
+          SERVER_PID=$!
+          
+          echo "⏳ Ngasih waktu 15 detik buat Allay ngebaca semua konfigurasi Okaeri..."
+          sleep 15
+          
+          echo "🛑 Mematikan server secara aman biar file JSON tersimpan..."
+          kill $SERVER_PID || true
+          
+          echo "✅ Hasil pemantauan agen:"
+          ls -la META-INF/native-image/
+
+      - name: Compile to Native Binary (With Agent Configs)
+        run: |
+          echo "🔥 Memulai kompilasi Native Image..."
+          native-image \
+            --no-fallback \
+            -H:+UnlockExperimentalVMOptions \
+            -H:IncludeResources=".*" \
+            -H:ConfigurationFileDirectories=META-INF/native-image \
+            -jar allay.jar allay-native
+
+      - name: Upload Native Binary Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: allay-native-arm64-agent
+          path: allay-native
+          
