@@ -1,0 +1,41 @@
+name: Build Allay Native Image (ARM64 GLIBC)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-native:
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup GraalVM 21
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '21'
+          distribution: 'graalvm'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          native-image-job-reports: 'true'
+
+      - name: Download Allay JAR
+        run: |
+          echo "📥 Nyedot file Allay JAR..."
+          curl -L -o allay.jar https://github.com/AllayMC/Allay/releases/download/0.14.0/allay-server-0.14.0-058fef833-shaded.jar
+
+      - name: Compile to Native Binary
+        run: |
+          echo "🔥 Memulai kompilasi Native Image buat PRoot Ubuntu..."
+          native-image \
+            --no-fallback \
+            -H:+UnlockExperimentalVMOptions \
+            -H:IncludeResources=".*" \
+            -jar allay.jar allay-native
+
+      - name: Upload Native Binary Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: allay-native-arm64
+          path: allay-native
+          
