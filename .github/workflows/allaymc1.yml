@@ -1,0 +1,46 @@
+name: Build Allay Static Native Image (ARM64)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-static-native:
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Build Dependencies & Musl Toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl musl-dev musl-tools zlib1g-dev build-essential
+
+      - name: Setup GraalVM 21
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '21'
+          distribution: 'graalvm'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          native-image-job-reports: 'true'
+
+      - name: Download Allay JAR
+        run: |
+          echo "📥 Nyedot file Allay JAR langsung dari Release..."
+          curl -L -o allay.jar https://github.com/AllayMC/Allay/releases/download/0.14.0/allay-server-0.14.0-058fef833-shaded.jar
+
+      - name: Compile to Fully Static Native Binary
+        run: |
+          echo "🔥 Memulai kompilasi Static Native Image dengan sertifikasi Resource..."
+          native-image \
+            --static \
+            --no-fallback \
+            --include-resources=".*" \
+            -jar allay.jar allay-native
+
+      - name: Upload Static Binary Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: allay-native-arm64-static
+          path: allay-native
+          
