@@ -1,0 +1,50 @@
+name: Build Whisper.cpp for Termux Arm64 (Optimized CPU)
+
+on:
+  workflow_dispatch: # Jalankan manual lewat tab Actions di web GitHub
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Whisper.cpp
+        uses: actions/checkout@v4
+        with:
+          repository: 'ggml-org/whisper.cpp'
+          fetch-depth: 1
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r26b
+
+      - name: Configure with CMake
+        run: |
+          cmake -B build \
+            -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-24 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DGGML_OPENMP=ON \
+            -DGGML_VULKAN=OFF \
+            -DCMAKE_C_FLAGS="-O3 -march=armv8.2-a+fp16+dotprod" \
+            -DCMAKE_CXX_FLAGS="-O3 -march=armv8.2-a+fp16+dotprod"
+
+      - name: Build Project
+        run: |
+          cmake --build build --config Release --target whisper-cli -j$(nproc)
+
+      - name: Prepare Artifact
+        run: |
+          mkdir dist
+          cp build/bin/whisper-cli dist/
+          chmod +x dist/whisper-cli
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: whisper-termux-optimized
+          path: dist/
+          
